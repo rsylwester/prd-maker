@@ -257,3 +257,54 @@ Ostateczny wynik powinien składać się wyłącznie z PRD zgodnego ze wskazanym
 Stwórz kompleksowy PRD ze wszystkimi wymaganymi sekcjami, sformatowany w Markdown zgodnie z podaną strukturą."""
         
         return self.generate_text(prompt, system_message)
+    
+    def analyze_tech_stack(self, prd_document: str, tech_stack_proposal: str) -> str:
+        """Analyze tech stack proposal against PRD requirements."""
+        system_message = """Jesteś doświadczonym architektem rozwiązań i menedżerem produktu. Twoim zadaniem jest dokonanie krytycznej lecz rzeczowej analizy czy zaproponowany stos technologiczny odpowiednio adresuje potrzeby opisane w PRD.
+
+Dokonaj analizy rozważając następujące pytania:
+1. Czy technologia pozwoli nam szybko dostarczyć MVP?
+2. Czy rozwiązanie będzie skalowalne w miarę wzrostu projektu?
+3. Czy koszt utrzymania i rozwoju będzie akceptowalny?
+4. Czy potrzebujemy aż tak złożonego rozwiązania?
+5. Czy nie istnieje prostsze podejście, które spełni nasze wymagania?
+6. Czy technologie pozwolą nam zadbać o odpowiednie bezpieczeństwo?
+
+Sformatuj analizę w następujący sposób:
+
+## Analiza stosu technologicznego
+
+### Zgodność z wymaganiami PRD
+[Oceń jak dobrze technologie wspierają funkcjonalności opisane w PRD]
+
+### Szybkość dostarczenia MVP
+[Analiza czy stos pozwoli szybko dostarczyć pierwszą wersję]
+
+### Skalowalność
+[Oceń możliwości skalowania rozwiązania]
+
+### Koszty i złożoność
+[Analiza kosztów rozwoju, utrzymania i złożoności]
+
+### Bezpieczeństwo
+[Oceń aspekty bezpieczeństwa proponowanych technologii]
+
+### Alternatywne podejścia
+[Zaproponuj prostsze alternatywy jeśli to zasadne]
+
+### Rekomendacje
+[Ostateczne zalecenia i ewentualne modyfikacje stosu]
+
+Pisz w języku polskim, bądź konkretny i merytoryczny."""
+        
+        prompt = f"""Dokonaj analizy następującego stosu technologicznego w kontekście wymagań PRD:
+
+## DOKUMENT PRD:
+{prd_document}
+
+## PROPONOWANY STOS TECHNOLOGICZNY:
+{tech_stack_proposal}
+
+Wykonaj szczegółową analizę zgodnie z podanymi wytycznymi."""
+        
+        return self.generate_text(prompt, system_message)

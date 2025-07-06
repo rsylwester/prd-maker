@@ -14,6 +14,7 @@ class ProjectStep(str, Enum):
     ANSWER_QUESTIONS = "answer_questions"
     PLANNING_SUMMARY = "planning_summary"
     PRD_DOCUMENT = "prd_document"
+    TECH_STACK_ANALYSIS = "tech_stack_analysis"
 
 
 class Project(BaseModel):
@@ -39,6 +40,8 @@ class Project(BaseModel):
     planning_answers: List[Dict[str, Any]] = Field(default_factory=list)
     planning_summary: str = Field(default="", description="Summary of planning session")
     prd_document: str = Field(default="", description="Generated PRD document")
+    tech_stack_proposal: str = Field(default="", description="Proposed tech stack")
+    tech_stack_analysis: str = Field(default="", description="Tech stack analysis and recommendations")
     
     # Additional metadata
     export_formats: List[str] = Field(default_factory=list)

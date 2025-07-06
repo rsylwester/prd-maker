@@ -11,7 +11,8 @@ from .steps import (
     render_project_description_step,
     render_planning_session_step,
     render_planning_summary_step,
-    render_prd_document_step
+    render_prd_document_step,
+    render_tech_stack_analysis_step
 )
 
 
@@ -106,7 +107,8 @@ def render_progress_bar(project: Project):
         ProjectStep.PLANNING_SESSION: "🗣️ Planning",
         ProjectStep.ANSWER_QUESTIONS: "❓ Questions",
         ProjectStep.PLANNING_SUMMARY: "📋 Summary",
-        ProjectStep.PRD_DOCUMENT: "📄 PRD"
+        ProjectStep.PRD_DOCUMENT: "📄 PRD",
+        ProjectStep.TECH_STACK_ANALYSIS: "🏗️ Tech Stack"
     }
     
     for i, (step, col) in enumerate(zip(steps, progress_cols)):
@@ -144,7 +146,7 @@ def main_page():
         st.markdown("---")
         st.header("Welcome to PRD Maker")
         st.markdown("""
-        PRD Maker guides you through a structured 6-step process to create comprehensive 
+        PRD Maker guides you through a structured 7-step process to create comprehensive 
         Product Requirements Documents using AI assistance.
         
         **The Process:**
@@ -154,6 +156,7 @@ def main_page():
         4. **❓ Answer Questions** - Provide detailed answers to AI questions
         5. **📋 Planning Summary** - AI summarizes key decisions and requirements
         6. **📄 PRD Document** - Final comprehensive PRD generation
+        7. **🏗️ Tech Stack Analysis** - AI analyzes your technology choices against PRD requirements
         """)
         
         with st.expander("🔧 Tech Stack"):
@@ -198,6 +201,8 @@ def main_page():
         render_planning_summary_step(current_project)
     elif current_project.current_step == ProjectStep.PRD_DOCUMENT:
         render_prd_document_step(current_project)
+    elif current_project.current_step == ProjectStep.TECH_STACK_ANALYSIS:
+        render_tech_stack_analysis_step(current_project)
     
     # Navigation buttons
     st.markdown("---")
@@ -237,6 +242,8 @@ def render_navigation_buttons(project: Project):
                 can_advance = bool(project.planning_summary.strip())
             elif project.current_step == ProjectStep.PRD_DOCUMENT:
                 can_advance = bool(project.prd_document.strip())
+            elif project.current_step == ProjectStep.TECH_STACK_ANALYSIS:
+                can_advance = bool(project.tech_stack_analysis.strip())
             
             if st.button("Next Step ➡️", disabled=not can_advance, use_container_width=True):
                 if project.advance_step():

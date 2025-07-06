@@ -1,12 +1,13 @@
 # PRD Maker
 
-AI-powered Product Requirements Document generator that guides you through a structured 6-step process to create comprehensive PRDs.
+AI-powered Product Requirements Document generator that guides you through a structured 7-step process to create comprehensive PRDs with tech stack analysis.
 
 ## Features
 
-- **6-Step Sequential Process**: Guided workflow from idea to complete PRD
+- **7-Step Sequential Process**: Guided workflow from idea to complete PRD with tech stack analysis
 - **AI Integration**: Support for GPT-4, Claude, and local Ollama models
 - **Interactive Planning**: AI-generated questions to clarify requirements
+- **Tech Stack Analysis**: AI evaluation of proposed technologies against PRD requirements
 - **Project Management**: Save, load, and manage multiple projects
 - **Export Options**: Download PRD as Markdown, Text, or JSON
 - **Browser Storage**: Projects saved in browser localStorage
@@ -19,6 +20,7 @@ AI-powered Product Requirements Document generator that guides you through a str
 4. **❓ Answer Questions** - Provide detailed answers to AI questions
 5. **📋 Planning Summary** - AI summarizes key decisions and requirements
 6. **📄 PRD Document** - Final comprehensive PRD generation
+7. **🏗️ Tech Stack Analysis** - AI analyzes your technology choices against PRD requirements
 
 ## Installation
 

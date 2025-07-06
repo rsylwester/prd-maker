@@ -362,3 +362,138 @@ def render_prd_document_step(project: Project):
             st.metric("Sections", sections)
         with col3:
             st.metric("User Stories", user_stories)
+
+
+def render_tech_stack_analysis_step(project: Project):
+    """Render the Tech Stack Analysis step."""
+    st.header("🏗️ Tech Stack Analysis")
+    st.markdown("Define your technology stack and get AI analysis of its suitability for your PRD requirements.")
+    
+    # Show PRD summary
+    if project.prd_document:
+        with st.expander("📋 PRD Document Summary"):
+            # Show first few sections of PRD
+            prd_lines = project.prd_document.split('\n')
+            preview_lines = prd_lines[:50]  # First 50 lines
+            st.markdown('\n'.join(preview_lines) + "\n\n*[Click to see full PRD document]*")
+    
+    # Tech stack proposal input
+    st.subheader("💻 Technology Stack Proposal")
+    
+    tech_stack_proposal = st.text_area(
+        "Describe your proposed technology stack:",
+        value=project.tech_stack_proposal,
+        height=200,
+        placeholder="""Example:
+Frontend: React.js with TypeScript, Tailwind CSS
+Backend: Node.js with Express.js, PostgreSQL database
+Authentication: Auth0
+Hosting: Vercel (frontend), Railway (backend)
+Additional: Redis for caching, SendGrid for emails""",
+        help="Describe the technologies, frameworks, databases, and services you plan to use"
+    )
+    
+    # Update project if changed
+    if tech_stack_proposal != project.tech_stack_proposal:
+        project.tech_stack_proposal = tech_stack_proposal
+        ProjectStorage.save_project(project)
+    
+    # Generate analysis button
+    if not project.tech_stack_analysis and project.tech_stack_proposal.strip() and project.prd_document:
+        if st.button("🔍 Analyze Tech Stack", type="primary"):
+            with st.spinner("Analyzing technology stack against PRD requirements..."):
+                try:
+                    llm_manager = st.session_state.llm_manager
+                    analysis = llm_manager.analyze_tech_stack(
+                        project.prd_document,
+                        project.tech_stack_proposal
+                    )
+                    project.tech_stack_analysis = analysis
+                    ProjectStorage.save_project(project)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error analyzing tech stack: {str(e)}")
+    
+    # Show/edit generated analysis
+    if project.tech_stack_analysis:
+        st.subheader("📊 Tech Stack Analysis:")
+        
+        # Tab interface for editing and preview
+        tab1, tab2 = st.tabs(["✏️ Edit Analysis", "👀 Preview"])
+        
+        with tab1:
+            # Edit analysis
+            new_analysis = st.text_area(
+                "Edit tech stack analysis:",
+                value=project.tech_stack_analysis,
+                height=600,
+                help="You can edit the generated analysis or add your own insights"
+            )
+            
+            if new_analysis != project.tech_stack_analysis:
+                project.tech_stack_analysis = new_analysis
+                ProjectStorage.save_project(project)
+            
+            # Regenerate option
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                if st.button("🔄 Regenerate Analysis"):
+                    with st.spinner("Regenerating tech stack analysis..."):
+                        try:
+                            llm_manager = st.session_state.llm_manager
+                            analysis = llm_manager.analyze_tech_stack(
+                                project.prd_document,
+                                project.tech_stack_proposal
+                            )
+                            project.tech_stack_analysis = analysis
+                            ProjectStorage.save_project(project)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error regenerating analysis: {str(e)}")
+        
+        with tab2:
+            # Preview analysis
+            st.markdown(project.tech_stack_analysis)
+        
+        # Export options
+        st.subheader("📥 Export Tech Stack Analysis")
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            # Download analysis as Markdown
+            st.download_button(
+                label="📝 Download Analysis (MD)",
+                data=project.tech_stack_analysis,
+                file_name=f"{project.name}_TechStack_Analysis.md",
+                mime="text/markdown"
+            )
+        
+        with col2:
+            # Download combined PRD + Tech Stack
+            combined_document = f"{project.prd_document}\n\n---\n\n{project.tech_stack_analysis}"
+            st.download_button(
+                label="📄 Download PRD + Tech Stack",
+                data=combined_document,
+                file_name=f"{project.name}_Complete_PRD.md",
+                mime="text/markdown"
+            )
+        
+        with col3:
+            # Project export
+            project_json = ProjectStorage.export_project(project.id)
+            if project_json:
+                st.download_button(
+                    label="📦 Export Full Project",
+                    data=project_json,
+                    file_name=f"{project.name}_complete_project.json",
+                    mime="application/json"
+                )
+        
+        st.success("✅ Tech stack analysis complete! Your PRD is now ready for development.")
+        
+    elif not project.tech_stack_proposal.strip():
+        st.warning("Please provide a technology stack proposal to generate analysis.")
+    elif not project.prd_document:
+        st.warning("PRD document must be completed before tech stack analysis.")
+    else:
+        st.info("Click 'Analyze Tech Stack' to get AI analysis of your technology choices.")
