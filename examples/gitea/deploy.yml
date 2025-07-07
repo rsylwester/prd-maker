@@ -1,0 +1,193 @@
+name: Deploy shorts-generator to Portainer
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install dependencies
+      run: |
+        pip install requests urllib3
+        
+    - name: Deploy to Portainer via Git
+      env:
+        PORTAINER_URL: ${{ secrets.PORTAINER_URL }}
+        PORTAINER_TOKEN: ${{ secrets.PORTAINER_TOKEN }}
+        PORTAINER_ENDPOINT_ID: ${{ secrets.PORTAINER_ENDPOINT_ID }}
+        STACK_NAME: "shorts-generator"
+      run: |
+        python << 'EOF'
+        import requests
+        import json
+        import os
+        import sys
+        import urllib3
+        
+        # Disable SSL warnings
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        
+        # Configuration
+        portainer_url = os.environ['PORTAINER_URL']
+        token = os.environ['PORTAINER_TOKEN']
+        endpoint_id = os.environ['PORTAINER_ENDPOINT_ID']
+        stack_name = os.environ['STACK_NAME']
+        
+        print(f"🚀 Deploying {stack_name} to Portainer via Git...")
+        print(f"📍 Portainer URL: {portainer_url}")
+        print(f"🎯 Endpoint ID: {endpoint_id}")
+        
+        # Headers for API requests
+        headers = {
+            'X-API-Key': token,
+            'Content-Type': 'application/json'
+        }
+        
+        # Check if stack exists
+        stacks_url = f"{portainer_url}/api/stacks"
+        response = requests.get(stacks_url, headers=headers, verify=False)
+        
+        if response.status_code != 200:
+            print(f"❌ Failed to get stacks: {response.status_code}")
+            print(response.text)
+            sys.exit(1)
+        
+        stacks = response.json()
+        existing_stack = None
+        
+        for stack in stacks:
+            if stack['Name'] == stack_name:
+                existing_stack = stack
+                break
+        
+        if existing_stack:
+            stack_id = existing_stack['Id']
+            print(f"📝 Found existing stack ID: {stack_id}")
+            
+            # Check if it's a Git-based stack
+            git_config = existing_stack.get('GitConfig')
+            if git_config:
+                print(f"✅ Stack is Git-based, trying different Git update methods...")
+                
+                # Try different Git update endpoints for Portainer 2.27.1
+                git_endpoints = [
+                    f"{portainer_url}/api/stacks/{stack_id}/git/redeploy?endpointId={endpoint_id}",
+                    f"{portainer_url}/api/stacks/{stack_id}/git?endpointId={endpoint_id}",
+                    f"{portainer_url}/api/stacks/{stack_id}/git/pull?endpointId={endpoint_id}",
+                    f"{portainer_url}/api/stacks/{stack_id}/redeploy?endpointId={endpoint_id}"
+                ]
+                
+                success = False
+                for endpoint in git_endpoints:
+                    print(f"🔄 Trying Git endpoint: {endpoint}")
+                    response = requests.post(endpoint, headers=headers, verify=False)
+                    
+                    if response.status_code == 200:
+                        print(f"✅ Stack '{stack_name}' updated via Git successfully!")
+                        print(f"🌐 Your app should be running at: http://192.168.50.205:7860")
+                        success = True
+                        break
+                    else:
+                        print(f"❌ Failed with {response.status_code}: {response.text}")
+                
+                if not success:
+                    print(f"⚠️ All Git update methods failed, falling back to regular update...")
+                    
+                    # Read docker-compose.yml for fallback update
+                    try:
+                        with open('docker-compose.yml', 'r') as f:
+                            compose_content = f.read()
+                        print("✅ docker-compose.yml loaded for fallback update")
+                    except FileNotFoundError:
+                        print("❌ docker-compose.yml not found!")
+                        sys.exit(1)
+                    
+                    # Fallback to regular stack update
+                    update_url = f"{portainer_url}/api/stacks/{stack_id}?endpointId={endpoint_id}"
+                    update_data = {
+                        "stackFileContent": compose_content,
+                        "env": [],
+                        "prune": False
+                    }
+                    
+                    response = requests.put(update_url, headers=headers, json=update_data, verify=False)
+                    
+                    if response.status_code == 200:
+                        print(f"✅ Stack '{stack_name}' updated via fallback method!")
+                        print(f"🌐 Your app should be running at: http://192.168.50.205:7860")
+                    else:
+                        print(f"❌ Fallback update failed: {response.status_code}")
+                        print(f"Response: {response.text}")
+                        sys.exit(1)
+            else:
+                print(f"⚠️ Stack is not Git-based, deleting and recreating as Git stack...")
+                
+                # Delete the existing non-Git stack
+                delete_url = f"{portainer_url}/api/stacks/{stack_id}?endpointId={endpoint_id}"
+                response = requests.delete(delete_url, headers=headers, verify=False)
+                
+                if response.status_code in [200, 204]:
+                    print(f"✅ Old stack deleted successfully")
+                else:
+                    print(f"❌ Failed to delete old stack: {response.status_code}")
+                    print(f"Response: {response.text}")
+                    sys.exit(1)
+                
+                # Create new Git-based stack
+                print(f"🆕 Creating new Git-based stack: {stack_name}")
+                create_url = f"{portainer_url}/api/stacks/create/standalone/repository?endpointId={endpoint_id}"
+                
+                create_data = {
+                    "name": stack_name,
+                    "repositoryURL": "http://192.168.50.205:3000/gitea/shorts-generator.git",
+                    "repositoryReferenceName": "refs/heads/main",
+                    "composeFile": "docker-compose.yml",
+                    "env": []
+                }
+                
+                response = requests.post(create_url, headers=headers, json=create_data, verify=False)
+                
+                if response.status_code in [200, 201]:
+                    print(f"✅ New Git-based stack '{stack_name}' created successfully!")
+                    print(f"🌐 Your app should be running at: http://192.168.50.205:7860")
+                else:
+                    print(f"❌ Failed to create Git-based stack: {response.status_code}")
+                    print(f"Response: {response.text}")
+                    sys.exit(1)
+        else:
+            # Create new Git-based stack
+            print(f"🆕 Creating new Git-based stack: {stack_name}")
+            create_url = f"{portainer_url}/api/stacks/create/standalone/repository?endpointId={endpoint_id}"
+            
+            create_data = {
+                "name": stack_name,
+                "repositoryURL": "http://192.168.50.205:3000/gitea/shorts-generator.git",
+                "repositoryReferenceName": "refs/heads/main",
+                "composeFile": "docker-compose.yml",
+                "env": []
+            }
+            
+            response = requests.post(create_url, headers=headers, json=create_data, verify=False)
+            
+            if response.status_code in [200, 201]:
+                print(f"✅ Git-based stack '{stack_name}' created successfully!")
+                print(f"🌐 Your app should be running at: http://192.168.50.205:7860")
+            else:
+                print(f"❌ Failed to create Git-based stack: {response.status_code}")
+                print(f"Response: {response.text}")
+                sys.exit(1)
+        
+        print("🎉 Git-based deployment completed!")
+        
+        EOF
